@@ -10,6 +10,22 @@ instrumentation** that adds nothing but a coverage map. The result: real
 coverage-guided feedback on embedded Linux, RT-kernel, and legacy targets
 where ASan/TSan-style runtimes are unavailable.
 
+## Is this for you?
+
+- Your target is an aarch64 industrial gateway (OpenWrt, 256 MB RAM, no
+  ASan, dated glibc): today your options are blind mutation or slow
+  full-system emulation. With ptrfuzz: coverage-guided feedback collected
+  from the debugger side.
+- Your target is a legacy, closed-source daemon you cannot recompile:
+  ptrace single-step coverage needs no rebuild at all.
+- Your target is a preempt-RT board with missing ptrace regsets and only
+  4–6 hardware debug registers: the backends are designed around exactly
+  these constraints.
+
+New to coverage-guided fuzzing, or the terms above? Read the
+[five-minute background](docs/background.md) — no fuzzing experience
+assumed.
+
 ## Why
 
 Coverage-guided fuzzing today assumes the target can host a sanitizer
