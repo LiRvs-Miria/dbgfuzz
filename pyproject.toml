@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ptrfuzz"
+version = "0.0.1"
+description = "Coverage-guided fuzzing without sanitizer runtimes: debugger-side coverage + compiler-side instrumentation"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0 WITH LLVM-exception" }
+authors = [{ name = "LiRvs-Miria" }]
+keywords = [
+  "fuzzing",
+  "ptrace",
+  "lldb",
+  "embedded",
+  "coverage",
+  "llvm",
+  "qemu",
+]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Developers",
+  "Topic :: Security",
+  "Topic :: Software Development :: Testing",
+]
+# symrepl becomes a dependency from M2 (installed from git; not on PyPI yet):
+# dependencies = ["symrepl @ git+https://github.com/LiRvs-Miria/symrepl.git"]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "hypothesis>=6"]
+
+[project.scripts]
+ptrfuzz = "ptrfuzz.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ptrfuzz"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
