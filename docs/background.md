@@ -20,7 +20,7 @@ No source. No rebuild. No sanitizer runtime. That constraint kills the standard 
 
 A debugger is already attached to the problem space. It can single-step any process it can reach. It can set hardware breakpoints. It can read registers and dump memory without asking the target for cooperation.
 
-So use it as the fuzzer's **eyes** — debugger-side coverage feedback for targets that cannot be instrumented — and as the fuzzer's **hands** — when a crash fires, the target is already stopped in the debugger. The scene is not a saved input file you must replay; it is the live process: call stack, registers, memory, queryable in place, replayable step by step through [symrepl](https://github.com/LiRvs-Miria/symrepl).
+So use it as the fuzzer's **eyes** — debugger-side coverage feedback for targets that cannot be instrumented — and as the fuzzer's **hands** — when a crash fires, the target is already stopped in the debugger. The scene is not a saved input file you must replay; it is the live process: call stack, registers, memory, queryable in place, replayable step by step.
 
 ## The architecture
 

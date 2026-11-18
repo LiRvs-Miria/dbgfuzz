@@ -21,7 +21,7 @@ The full story lives in [docs/background.md](docs/background.md) (中文版：[d
 ## What you get
 
 1. **Directed inputs for black-box targets.** Debugger-side coverage (single-step, hardware breakpoints, LLDB sessions) tells the mutation engine which paths were actually hit. No source, no rebuild, no sanitizer.
-2. **Crash = live scene.** When a crash fires, the target is already stopped in the debugger. Call stack, registers, and memory are queryable in place; step-by-step replay works through [symrepl](https://github.com/LiRvs-Miria/symrepl). No lost state, no reproduce-from-input-file ritual.
+2. **Crash = live scene.** When a crash fires, the target is already stopped in the debugger. Call stack, registers, and memory are queryable in place, with step-by-step replay built in. No lost state, no reproduce-from-input-file ritual.
 
 ## Use cases
 
