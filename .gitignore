@@ -1,0 +1,3 @@
+build/
+fuzz_input.bin
+__pycache__/
