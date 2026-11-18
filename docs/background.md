@@ -1,71 +1,33 @@
-# Background — five minutes
+# Background: why ptrfuzz exists
 
-English | [简体中文](background.zh-CN.md)
+*A five-minute read. 中文版：[background.zh-CN.md](background.zh-CN.md)。*
 
-This page assumes nothing. If you already fuzz daily, skim the glossary
-and jump back to the [README](../README.md).
+## The job
 
-## How coverage-guided fuzzing works — and why it needs the target's help
+You have a binary you cannot rebuild. It runs on real hardware — an IoT device, a vehicle ECU, a PLC, an RTOS task. You want to throw inputs at it, know which paths those inputs actually exercised, and — when it crashes — keep the scene: the call stack, the registers, the memory, right where the debugger stopped it.
 
-A fuzzer generates inputs and throws them at a target. Blindly, this is
-a needle in a haystack. Coverage feedback is what makes it smart: the
-fuzzer tracks *which branches and functions each input reached*, and
-spends its effort on inputs that explored something new. Nearly every
-production fuzzer (libFuzzer, AFL, honggfuzz, OSS-Fuzz) works this way.
+No source. No rebuild. No sanitizer runtime. That constraint kills the standard workflow.
 
-The catch: **the target must report its own coverage**. In practice that
-means compiling the target with a sanitizer runtime (ASan/UBSan/TSan) or
-at least coverage counters — code and data injected into the target
-process, plus a runtime library to collect it.
+## Why the standard tools fall short
 
-## The constrained-target reality
+**Source-required fuzzers** (libFuzzer, AFL++ with instrumentation) are the gold standard for throughput — if you can rebuild the target. Closed-source firmware and third-party binaries are out of reach.
 
-Huge classes of interesting targets cannot do that:
+**Emulation-based fuzzing** (AFL++ QEMU mode) handles bare binaries, but emulation is a model, and models leak: peripherals are missing or approximated, timing is wrong, hardware state does not exist. On x86 you can fall back to Intel PT for trace-based coverage on real silicon. On embedded ARM there is no cheap equivalent — hardware trace (ETM) needs probes and targets most engineers do not have.
 
-- **Embedded Linux / gateways** — no ASan (memory budget, dated glibc),
-  no room for instrumentation overhead.
-- **Real-time kernels and boards** — missing kernel features (ptrace
-  regsets for hardware debug registers, as on many arm64 RT builds),
-  only 4–6 hardware breakpoints per thread.
-- **Legacy, closed-source binaries** — cannot be recompiled, so no
-  instrumentation can be added at all.
+**Protocol fuzzers** (boofuzz and friends) generate structured inputs over a channel and detect hangs and crashes. But they walk blind: no feedback on which parser states were reached, so mutation is guesswork, and deep logic past the front door is rarely hit.
 
-Full-system emulation (QEMU) does work everywhere — at a 10–100x
-slowdown. The consequence today: **most deployed attack surfaces
-(industrial controllers, OT/IoT devices, firmware) have no practical
-coverage-guided fuzzing story.** Blind mutation on a protocol parser is
-what passes for fuzzing there.
+## The insight
 
-## ptrfuzz's answer
+A debugger is already attached to the problem space. It can single-step any process it can reach. It can set hardware breakpoints. It can read registers and dump memory without asking the target for cooperation.
 
-Move coverage collection out of the target:
+So use it as the fuzzer's **eyes** — debugger-side coverage feedback for targets that cannot be instrumented — and as the fuzzer's **hands** — when a crash fires, the target is already stopped in the debugger. The scene is not a saved input file you must replay; it is the live process: call stack, registers, memory, queryable in place, replayable step by step through [symrepl](https://github.com/LiRvs-Miria/symrepl).
 
-- **debugger-side backends** — observe the target from outside:
-  `PTRACE_SINGLESTEP` (trap after every instruction; universal, slow) or
-  hardware breakpoints (fast, scarce), optionally orchestrated through
-  [symrepl](https://github.com/LiRvs-Miria/symrepl). Zero recompilation.
-- **compiler-side minimal instrumentation** — an LLVM pass that emits a
-  coverage bitmap without an ASan-style runtime (the bitmap is read on
-  process exit or via the debugger). Fast, needs recompilation.
+## The niche, stated honestly
 
-Same coverage-guided loop as libFuzzer; different place the feedback
-comes from. Targets that never had a fuzzer story get one.
+ptrfuzz is not competing with libFuzzer or AFL++. If you have source and want throughput, use them — they are faster by orders of magnitude. ptrfuzz serves the intersection:
 
-## Who is this for
+> **real target + closed source + coverage-guided + cheap triage**
 
-- **Product security teams** fuzzing their own firmware, gateways, and
-  protocol parsers on the hardware they actually ship.
-- **OT / IoT researchers** auditing device classes the mainstream tools
-  cannot reach.
-- **QA / reliability engineers** on embedded targets, where "find the
-  input that hangs the event loop" matters as much as memory safety.
+That intersection is real: firmware security research, vendor SDL for shipped binaries (a legal obligation in the EU from December 2027 under the Cyber Resilience Act), and ICS runtime research where the runtime itself is the target.
 
-## Glossary
-
-| Term | Meaning |
-|---|---|
-| sanitizer runtime (消毒器运行时) | Compiler-injected libraries (ASan/UBSan/TSan) living inside the target to detect bugs and report coverage — what constrained targets cannot host |
-| coverage map (覆盖图) | Bitmap/counters recording which branches or basic blocks executed |
-| single-step (单步) | Trap after every instruction (`PTRACE_SINGLESTEP`) — works on any target, orders of magnitude slower |
-| hw breakpoint (硬件断点) | Address comparators in the CPU's debug registers — fast but scarce (4–6 per thread on typical arm64) |
-| corpus (语料库) | The set of interesting inputs the fuzzer keeps and mutates |
+What ptrfuzz is **not**: a throughput tool. Debugger-side coverage on real hardware is slow, and that is accepted by design — campaigns are targeted and nightly, not bulk. The input-channel harness (getting bytes into a closed target) remains the user's job; ptrfuzz covers everything downstream of the channel.

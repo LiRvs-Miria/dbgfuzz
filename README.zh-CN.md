@@ -1,69 +1,40 @@
 # ptrfuzz
 
-[English](README.md) | 简体中文
+面向跑不了 sanitizer runtime 的目标的覆盖率引导模糊测试：闭源二进制、嵌入式固件、RTOS 任务、真实设备。
 
-为跑不了 sanitizer runtime 的目标做覆盖率引导模糊测试。
+**模糊输入。盯着 crash。留住 crash 现场——调用栈、寄存器、内存，调试器停下时的原样。**
 
-ptrfuzz 在**调试器侧**收集覆盖率——经 ptrace、硬件断点或 LLDB 会话——并与
-**编译器侧插桩**配对：后者只多产出一张覆盖图，不引入任何完整 runtime。结
-果是：在嵌入式 Linux、RT 内核和遗留目标上获得真正的覆盖率引导反馈，而这些
-目标上 ASan/TSan 类 runtime 通常不可用。
+## 背景
 
-## 这是不是给你的？
+经典 fuzzing 工具各自都有失效的地方：
 
-- 你的目标是 aarch64 工业网关（OpenWrt、256MB 内存、没有 ASan、glibc 老
-  旧）：今天的选项只有盲变异或缓慢的全系统仿真。用 ptrfuzz：从调试器侧
-  收集覆盖率，拿到覆盖率引导反馈。
-- 你的目标是无法重编译的遗留闭源守护进程：ptrace 单步覆盖率完全不需要重
-  编译。
-- 你的目标是 preempt-RT 板卡，ptrace regset 缺失、硬件调试寄存器只有
-  4–6 个：各后端就是围绕这些约束设计的。
+- **libFuzzer / AFL++** 需要源码或可重编译的插桩。快，但对你编译不了的东西一概失明。
+- **QEMU 模式 fuzzing** 能打裸二进制，但扭曲设备行为：外设、时序、硬件状态全部缺失。嵌入式 ARM 上也没有便宜的硬件 trace 替代品。
+- **协议 fuzzer**（boofuzz 之类）能注入结构化输入，但盲打——没有覆盖反馈。
 
-对覆盖率引导模糊测试或上述术语陌生？读一读
-[五分钟背景](docs/background.zh-CN.md)，不假设任何模糊测试经验。
+而调试器就摆在那里。凡是它能 attach 的进程——包括所有 fuzzer 无法插桩的目标——它都能单步、下硬件断点、读寄存器、dump 内存。
 
-## 为什么做这个
+ptrfuzz 就是把这台调试器变成 fuzzer 的眼睛和手：给黑盒目标覆盖反馈，crash 一发生现场就在手边。
 
-今天的覆盖率引导模糊测试默认目标能承载 sanitizer runtime。嵌入式和 RT 目
-标经常不能：没有 ASan、内存预算紧张、内核功能缺失（ptrace regset、硬件断
-点）、跑在真机上。在这类目标上，模糊测试退化为盲变异或缓慢的全系统仿真。
+完整故事见 [docs/background.zh-CN.md](docs/background.zh-CN.md)（English: [docs/background.md](docs/background.md)）。
 
-ptrfuzz 用可插拔的覆盖率后端填补这个空隙：
+## 你能得到什么
 
-- **调试器侧**：ptrace 单步 / 硬件断点 / LLDB 会话收集覆盖率——零重编译，
-  慢但普适；
-- **编译器侧**：LLVM 插桩只产出覆盖位图，不引入完整 sanitizer runtime——
-  快，但需要重编译。
+1. **黑盒目标的定向输入。** 调试器侧覆盖（单步、硬件断点、LLDB 会话）告诉变异引擎哪些路径真的跑到过。不需要源码、不需要重编译、不需要 sanitizer。
+2. **crash = 活现场。** crash 触发的瞬间，目标已经停在调试器里。调用栈、寄存器、内存就地可查；逐步重放走 [symrepl](https://github.com/LiRvs-Miria/symrepl)。没有丢失的状态，没有"拿输入文件从头重现"的仪式。
 
-## 生态
+## 使用场景
 
-ptrfuzz 之于 [symrepl](https://github.com/LiRvs-Miria/symrepl)，如同 Clang
-之于 LLVM：symrepl 提供调试侧基础设施（会话编排、断点管理、状态检查），
-ptrfuzz 在其上构建模糊测试平台。从 ptrfuzz M2 起，symrepl 成为库依赖。
+| 场景 | 谁用 | 为什么是 ptrfuzz |
+|---|---|---|
+| 真机上的闭源固件（IoT / 车规 / 医疗） | 设备安全团队、研究员 | 真机行为 QEMU 模拟不了；ARM 缺便宜 trace 硬件 |
+| 硬件在环测试（RTOS 目标） | 厂商 SDL 团队 | EU CRA 2027 年 12 月起适用：厂商必须测试出厂二进制，而他们没有 sanitizer 构建 |
+| 深度定向测试（patch 验证、假设驱动） | 安全响应 | 覆盖钉在指定区域；crash 现场与重放内建 |
+| ICS 运行时/协议（FORTE、OpenPLC、OPC UA 栈） | OT 安全研究 | 真实运行时语义 + 覆盖引导（boofuzz 盲打） |
+| 免重编译的覆盖反馈 | 没有覆盖构建管线的团队 | 调试器侧覆盖图，不重编译 |
 
-## 范围与架构铁律
-
-ptrfuzz 只消费**公开标准格式**——与 symrepl 同一条防火墙（见
-[docs/adr/0001-scope-ip-firewall-and-ecosystem.md](docs/adr/0001-scope-ip-firewall-and-ecosystem.md)）：
-
-- DWARF 调试信息、LLVM IR / bitcode
-- libFuzzer 兼容的语料库与覆盖图
-- QEMU（user / system 模式）作为目标运行时
-
-任何只有了解特定私有代码库或方言才有意义的内容都不属于这里。
+ptrfuzz 不和 libFuzzer/AFL++ 竞争：有源码、要吞吐，就用它们。ptrfuzz 服务的是交集——**真机 + 闭源 + 要覆盖引导 + 要便宜 triage**。
 
 ## 状态
 
-Pre-MVP：仅脚手架。路线图见 [docs/roadmap.md](docs/roadmap.md)——下一步是
-M1（ptrace 单步覆盖率基线）。
-
-## 计划中的依赖
-
-- 支持 ptrace 的 Linux（x86-64 / aarch64）；跨目标运行用 QEMU
-- 带 SanitizerCoverage 类插桩的 LLVM（M3+）
-- Python >= 3.10；symrepl（M2 起）
-
-## 许可证
-
-Apache-2.0 WITH LLVM-exception——与 LLVM 项目相同的许可证，与 ptrfuzz 所处
-的生态一致。
+已 scaffold；设计中。文档：本文件（中文镜像）+ [`README.md`](README.md)（英文权威版）+ [背景](docs/background.zh-CN.md)（[English](docs/background.md)）。

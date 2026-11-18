@@ -1,80 +1,40 @@
 # ptrfuzz
 
-English | [简体中文](README.zh-CN.md)
+Coverage-guided fuzzing for targets that cannot run a sanitizer runtime: closed-source binaries, embedded firmware, RTOS tasks, real devices.
 
-Coverage-guided fuzzing for targets that cannot run sanitizer runtimes.
+**Fuzz inputs. Watch for crashes. Keep the crash scene — call stack, registers, memory — exactly as the debugger left it.**
 
-ptrfuzz collects coverage on the **debugger side** — via ptrace, hardware
-breakpoints, or an LLDB session — and pairs it with **compiler-side
-instrumentation** that adds nothing but a coverage map. The result: real
-coverage-guided feedback on embedded Linux, RT-kernel, and legacy targets
-where ASan/TSan-style runtimes are unavailable.
+## Background
 
-## Is this for you?
+Classic fuzzing tools all break down somewhere:
 
-- Your target is an aarch64 industrial gateway (OpenWrt, 256 MB RAM, no
-  ASan, dated glibc): today your options are blind mutation or slow
-  full-system emulation. With ptrfuzz: coverage-guided feedback collected
-  from the debugger side.
-- Your target is a legacy, closed-source daemon you cannot recompile:
-  ptrace single-step coverage needs no rebuild at all.
-- Your target is a preempt-RT board with missing ptrace regsets and only
-  4–6 hardware debug registers: the backends are designed around exactly
-  these constraints.
+- **libFuzzer / AFL++** need source or rebuildable instrumentation. Fast, but blind to anything you cannot recompile.
+- **QEMU-mode fuzzing** reaches bare binaries but distorts device behavior: peripherals, timing, and hardware state go missing. On embedded ARM there is no cheap hardware-trace alternative.
+- **Protocol fuzzers** (boofuzz and friends) inject structured inputs but walk blind — no coverage feedback.
 
-New to coverage-guided fuzzing, or the terms above? Read the
-[five-minute background](docs/background.md) — no fuzzing experience
-assumed.
+Meanwhile a debugger sits right there. It can single-step, set hardware breakpoints, read registers and dump memory on any process it can attach to — including the ones no fuzzer can instrument.
 
-## Why
+ptrfuzz turns that debugger into the fuzzer's eyes and hands: coverage feedback for black-box targets, and a live crash scene the moment something breaks.
 
-Coverage-guided fuzzing today assumes the target can host a sanitizer
-runtime. Embedded and RT targets frequently cannot: no ASan, tight memory
-budgets, missing kernel features (ptrace regsets, hardware breakpoints),
-real hardware. On those targets, fuzzing degenerates to blind mutation or
-slow full-system emulation.
+The full story lives in [docs/background.md](docs/background.md) (中文版：[docs/background.zh-CN.md](docs/background.zh-CN.md)).
 
-ptrfuzz closes that gap with pluggable coverage backends:
+## What you get
 
-- **debugger-side**: single-step / hardware-breakpoint coverage via ptrace
-  or an LLDB session — zero recompilation, slow but universal;
-- **compiler-side**: LLVM instrumentation emitting a coverage bitmap
-  without pulling in a full sanitizer runtime — fast, requires
-  recompilation.
+1. **Directed inputs for black-box targets.** Debugger-side coverage (single-step, hardware breakpoints, LLDB sessions) tells the mutation engine which paths were actually hit. No source, no rebuild, no sanitizer.
+2. **Crash = live scene.** When a crash fires, the target is already stopped in the debugger. Call stack, registers, and memory are queryable in place; step-by-step replay works through [symrepl](https://github.com/LiRvs-Miria/symrepl). No lost state, no reproduce-from-input-file ritual.
 
-## Ecosystem
+## Use cases
 
-ptrfuzz is to [symrepl](https://github.com/LiRvs-Miria/symrepl) what Clang
-is to LLVM: symrepl provides the debugger-side infrastructure (session
-orchestration, breakpoint management, state inspection), and ptrfuzz builds
-the fuzzing platform on top of it. From ptrfuzz M2 onward, symrepl is a
-library dependency.
+| Scenario | Who | Why ptrfuzz |
+|---|---|---|
+| Closed-source firmware on real hardware (IoT / automotive / medical) | Device security teams, researchers | Real-device behavior QEMU cannot model; ARM lacks cheap trace hardware |
+| Hardware-in-the-loop testing (RTOS targets) | Vendor SDL teams | EU CRA applies from Dec 2027: vendors must test shipped binaries without sanitizer builds |
+| Deep targeted testing (patch verification, hypothesis-driven) | Security responders | Coverage pinned to a region; crash scene and replay built in |
+| ICS runtime / protocol fuzzing (FORTE, OpenPLC, OPC UA stacks) | OT security research | Real runtime semantics + coverage guidance (boofuzz walks blind) |
+| Coverage feedback without rebuilding | Teams without coverage pipelines | Debugger-side coverage map, no recompilation |
 
-## Scope and architecture rule
-
-ptrfuzz consumes **public, standard formats only** — the same firewall as
-symrepl (see
-[docs/adr/0001-scope-ip-firewall-and-ecosystem.md](docs/adr/0001-scope-ip-firewall-and-ecosystem.md)):
-
-- DWARF debug info, LLVM IR / bitcode
-- libFuzzer-compatible corpora and coverage maps
-- QEMU (user / system mode) as target runtime
-
-Anything that only makes sense with knowledge of a particular private
-codebase or dialect does not belong here.
+Not a competitor to libFuzzer/AFL++: if you have source and want throughput, use them. ptrfuzz serves the intersection *real target + closed source + coverage-guided + cheap triage*.
 
 ## Status
 
-Pre-MVP: scaffolding only. See the [roadmap](docs/roadmap.md) — M1
-(ptrace single-step coverage baseline) is next.
-
-## Requirements (planned)
-
-- Linux with ptrace (x86-64 / aarch64); QEMU for cross-target runs
-- LLVM with SanitizerCoverage-style instrumentation (M3+)
-- Python >= 3.10; symrepl (from M2)
-
-## License
-
-Apache-2.0 WITH LLVM-exception — the same license as the LLVM project,
-matching the ecosystem ptrfuzz lives in.
+Scaffolded; design in progress. Docs: this file (authoritative English) + [`README.zh-CN.md`](README.zh-CN.md) (Chinese mirror) + [background](docs/background.md) ([中文](docs/background.zh-CN.md)).
