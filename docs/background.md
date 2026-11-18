@@ -22,6 +22,32 @@ A debugger is already attached to the problem space. It can single-step any proc
 
 So use it as the fuzzer's **eyes** — debugger-side coverage feedback for targets that cannot be instrumented — and as the fuzzer's **hands** — when a crash fires, the target is already stopped in the debugger. The scene is not a saved input file you must replay; it is the live process: call stack, registers, memory, queryable in place, replayable step by step through [symrepl](https://github.com/LiRvs-Miria/symrepl).
 
+## The architecture
+
+ptrfuzz runs on your workstation. The target runs a small companion — `lldb-server` — and the two are connected by a debug channel. Fuzz inputs go in through the target's real interface (network, serial, file): the same door the world would use. Two channels, one brain:
+
+```
+workstation                                    target
+├─ ptrfuzz                                     └─ lldb-server (companion)
+│    (fuzzer, coverage, reports)
+└─ target binary + debug info copy
+        ← debug channel: breakpoints, stops, state reads
+        ← input channel (network / serial): the real attack surface
+```
+
+What this placement gives you:
+
+1. **Devices stay clean.** They run the stripped release build; the debug info copy lives on your workstation. Devices never need to carry symbols.
+2. **Works with or without debug info.** With it, reports show functions and lines; without it, address chains and disassembly. Coverage guidance is unaffected either way.
+3. **Crashes are captured, not reproduced.** The whole campaign runs under debugger control, so at crash time the target is already stopped, scene intact. For stateful targets that may never reproduce the same crash twice, capture is the only dependable evidence.
+
+## What each buyer gets
+
+- **Device and RTOS vendors (SDL, CRA compliance).** Build once, keep the unstripped artifact on your side; the devices in your test farm run stripped release builds. Nightly campaigns produce crash scenes with function-level call stacks — and campaign reports double as testing evidence.
+- **Security researchers on third-party firmware.** No symbols anywhere? Coverage guidance still steers the fuzzer, and crash scenes come back as address chains with disassembly for triage. A stateful device may never reproduce the same crash twice — live capture beats replay.
+- **OT / ICS researchers (PLC runtimes, OPC UA stacks).** Attach to the runtime on the real controller or gateway, inject through the real protocol port, and get crash scenes on the actual stack — not on an emulator that distorts the device.
+- **Responders verifying patches.** Pin coverage to the patched region, replay the proof-of-vulnerability inputs, assert the crash path is gone — with state replay to back the claim.
+
 ## The niche, stated honestly
 
 ptrfuzz is not competing with libFuzzer or AFL++. If you have source and want throughput, use them — they are faster by orders of magnitude. ptrfuzz serves the intersection:
