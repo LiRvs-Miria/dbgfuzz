@@ -4,7 +4,7 @@
 Per plan, no port is opened yet: the payload lands in a local file that a
 future target-facing input shim can forward. When the target gains a real
 interface (TCP/serial/file), this script becomes the sender -- the seam
-ptrfuzz's input driver will occupy. Keep it out of the debug channel.
+dbgfuzz's input driver will occupy. Keep it out of the debug channel.
 """
 
 import argparse

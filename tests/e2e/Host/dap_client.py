@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Host-side DAP driver -- Python stand-in for the future ptrfuzz core.
+"""Host-side DAP driver -- Python stand-in for the future dbgfuzz core.
 
 Drives lldb-dap over stdio (standard DAP framing: Content-Length + JSON).
 lldb-dap then speaks RSP to lldb-server on the Device side over the debug
@@ -186,8 +186,8 @@ def main():
     try:
         # 1. initialize
         session.request("initialize", {
-            "adapterID": "ptrfuzz-e2e",
-            "clientID": "ptrfuzz-host",
+            "adapterID": "dbgfuzz-e2e",
+            "clientID": "dbgfuzz-host",
             "locale": "en",
         })
 

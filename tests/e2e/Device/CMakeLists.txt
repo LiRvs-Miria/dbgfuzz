@@ -6,7 +6,7 @@
 #   cmake --build build --target spawn          # blocks; Ctrl+C to stop
 # The spawn script also works standalone: ./run_lldbserver.sh build/helloworld
 cmake_minimum_required(VERSION 3.20)
-project(ptrfuzz_device_e2e CXX)
+project(dbgfuzz_device_e2e CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

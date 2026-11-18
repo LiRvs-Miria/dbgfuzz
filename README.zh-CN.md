@@ -1,4 +1,4 @@
-# ptrfuzz
+# dbgfuzz
 
 面向跑不了 sanitizer runtime 的目标的覆盖率引导模糊测试：闭源二进制、嵌入式固件、RTOS 任务、真实设备。
 
@@ -14,7 +14,7 @@
 
 而调试器就摆在那里。凡是它能 attach 的进程——包括所有 fuzzer 无法插桩的目标——它都能单步、下硬件断点、读寄存器、dump 内存。
 
-ptrfuzz 就是把这台调试器变成 fuzzer 的眼睛和手：给黑盒目标覆盖反馈，crash 一发生现场就在手边。
+dbgfuzz 就是把这台调试器变成 fuzzer 的眼睛和手：给黑盒目标覆盖反馈，crash 一发生现场就在手边。
 
 完整故事见 [docs/background.zh-CN.md](docs/background.zh-CN.md)（English: [docs/background.md](docs/background.md)）。
 
@@ -25,7 +25,7 @@ ptrfuzz 就是把这台调试器变成 fuzzer 的眼睛和手：给黑盒目标�
 
 ## 使用场景
 
-| 场景 | 谁用 | 为什么是 ptrfuzz |
+| 场景 | 谁用 | 为什么是 dbgfuzz |
 |---|---|---|
 | 真机上的闭源固件（IoT / 车规 / 医疗） | 设备安全团队、研究员 | 真机行为 QEMU 模拟不了；ARM 缺便宜 trace 硬件 |
 | 硬件在环测试（RTOS 目标） | 厂商 SDL 团队 | EU CRA 2027 年 12 月起适用：厂商必须测试出厂二进制，而他们没有 sanitizer 构建 |
@@ -33,7 +33,7 @@ ptrfuzz 就是把这台调试器变成 fuzzer 的眼睛和手：给黑盒目标�
 | ICS 运行时/协议（FORTE、OpenPLC、OPC UA 栈） | OT 安全研究 | 真实运行时语义 + 覆盖引导（boofuzz 盲打） |
 | 免重编译的覆盖反馈 | 没有覆盖构建管线的团队 | 调试器侧覆盖图，不重编译 |
 
-ptrfuzz 不和 libFuzzer/AFL++ 竞争：有源码、要吞吐，就用它们。ptrfuzz 服务的是交集——**真机 + 闭源 + 要覆盖引导 + 要便宜 triage**。
+dbgfuzz 不和 libFuzzer/AFL++ 竞争：有源码、要吞吐，就用它们。dbgfuzz 服务的是交集——**真机 + 闭源 + 要覆盖引导 + 要便宜 triage**。
 
 ## 状态
 

@@ -1,4 +1,4 @@
-# ptrfuzz
+# dbgfuzz
 
 Coverage-guided fuzzing for targets that cannot run a sanitizer runtime: closed-source binaries, embedded firmware, RTOS tasks, real devices.
 
@@ -14,7 +14,7 @@ Classic fuzzing tools all break down somewhere:
 
 Meanwhile a debugger sits right there. It can single-step, set hardware breakpoints, read registers and dump memory on any process it can attach to — including the ones no fuzzer can instrument.
 
-ptrfuzz turns that debugger into the fuzzer's eyes and hands: coverage feedback for black-box targets, and a live crash scene the moment something breaks.
+dbgfuzz turns that debugger into the fuzzer's eyes and hands: coverage feedback for black-box targets, and a live crash scene the moment something breaks.
 
 The full story lives in [docs/background.md](docs/background.md) (中文版：[docs/background.zh-CN.md](docs/background.zh-CN.md)).
 
@@ -25,7 +25,7 @@ The full story lives in [docs/background.md](docs/background.md) (中文版：[d
 
 ## Use cases
 
-| Scenario | Who | Why ptrfuzz |
+| Scenario | Who | Why dbgfuzz |
 |---|---|---|
 | Closed-source firmware on real hardware (IoT / automotive / medical) | Device security teams, researchers | Real-device behavior QEMU cannot model; ARM lacks cheap trace hardware |
 | Hardware-in-the-loop testing (RTOS targets) | Vendor SDL teams | EU CRA applies from Dec 2027: vendors must test shipped binaries without sanitizer builds |
@@ -33,7 +33,7 @@ The full story lives in [docs/background.md](docs/background.md) (中文版：[d
 | ICS runtime / protocol fuzzing (FORTE, OpenPLC, OPC UA stacks) | OT security research | Real runtime semantics + coverage guidance (boofuzz walks blind) |
 | Coverage feedback without rebuilding | Teams without coverage pipelines | Debugger-side coverage map, no recompilation |
 
-Not a competitor to libFuzzer/AFL++: if you have source and want throughput, use them. ptrfuzz serves the intersection *real target + closed source + coverage-guided + cheap triage*.
+Not a competitor to libFuzzer/AFL++: if you have source and want throughput, use them. dbgfuzz serves the intersection *real target + closed source + coverage-guided + cheap triage*.
 
 ## Status
 

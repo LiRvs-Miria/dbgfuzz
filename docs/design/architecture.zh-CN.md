@@ -1,10 +1,10 @@
-# ptrfuzz 设计文档：架构
+# dbgfuzz 设计文档：架构
 
-> 状态：草案（2026-11-18）。范围：ptrfuzz 内部如何工作——部件、通道、覆盖后端、符号化、crash 处理。ptrfuzz 为什么存在读[背景](../background.md)（English: [background.md](../background.md)）。English: [architecture.md](architecture.md)。
+> 状态：草案（2026-11-18）。范围：dbgfuzz 内部如何工作——部件、通道、覆盖后端、符号化、crash 处理。dbgfuzz 为什么存在读[背景](../background.md)（English: [background.md](../background.md)）。English: [architecture.md](architecture.md)。
 
 ## 部件与部署
 
-ptrfuzz 跑在工作站上；目标端跑一个小小的伴生程序 `lldb-server`（为设备交叉编译，Linux 目标可原生）。调试信息——ELF/DWARF 副本——是工作站资产。目标跑出厂的那个二进制：stripped release 完全没问题。
+dbgfuzz 跑在工作站上；目标端跑一个小小的伴生程序 `lldb-server`（为设备交叉编译，Linux 目标可原生）。调试信息——ELF/DWARF 副本——是工作站资产。目标跑出厂的那个二进制：stripped release 完全没问题。
 
 ```
 工作站                                            目标端
@@ -19,7 +19,7 @@ ptrfuzz 跑在工作站上；目标端跑一个小小的伴生程序 `lldb-serve
 
 ## 两条通道，一个大脑
 
-调试通道和输入通道永不互相通信。ptrfuzz 同时持有两条连接并编排时序；lldb-server 与输入驱动彼此不知道对方存在。
+调试通道和输入通道永不互相通信。dbgfuzz 同时持有两条连接并编排时序；lldb-server 与输入驱动彼此不知道对方存在。
 
 **输入通道就是真实攻击面。** fuzz 输入从目标的真实接口进入——网络、串口、文件——绝不走调试通道。从调试通道注入等于测调试路径，不是测目标。
 
@@ -72,4 +72,4 @@ crash = 一个不是我们断点的信号导致的停止。处理刻意朴素：
 - 硬件断点槽位稀缺；真机上的覆盖粒度是预算资源，不是免费品。
 - 目标机上的 `lldb-server` 本身是攻击面和占用：只进测试构建，绝不进生产镜像。
 - 解释型目标超范围：跑得动解释器的环境，现有的解释器感知 fuzzer（Atheris 类）已经赢。
-- harness 问题（把字节送进闭源目标）不在范围内；ptrfuzz 管输入通道之后的所有事。
+- harness 问题（把字节送进闭源目标）不在范围内；dbgfuzz 管输入通道之后的所有事。

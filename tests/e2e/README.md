@@ -3,7 +3,7 @@
 > Status: **live** (2026-11-18). Split along the deployment line in
 > [design/architecture.md](../../docs/design/architecture.md): **Device** = the side where
 > `lldb-server` runs (target), **Host** = the side where LLDB runs (workstation). The Host
-> Python script stands in for ptrfuzz core (C++), which does not exist yet.
+> Python script stands in for dbgfuzz core (C++), which does not exist yet.
 >
 > Verified end to end on this machine: remote attach → breakpoint stop in `greet()` →
 > stack trace → resume through 5 breakpoint hits → exit → clean disconnect. (`lldb` /
@@ -16,7 +16,7 @@ Device/   lldb-server side (target stand-in)
   helloworld.cpp      test target (-g: line table needed for DAP breakpoints; greet() = BP symbol, loop of 5)
   CMakeLists.txt      builds helloworld + `spawn` custom target that runs lldb-server
   run_lldbserver.sh   the spawn script; standalone or via the cmake target
-Host/     lldb-dap side (ptrfuzz stand-in, Python stdlib only)
+Host/     lldb-dap side (dbgfuzz stand-in, Python stdlib only)
   dap_client.py       DAP driver over stdio: initialize -> attach(gdb-remote) -> breakpoint stop -> stack -> exit
   inject_fuzz_data.py input-channel stub: pours fuzz data to a file; opens no port (by design)
 ```
@@ -84,6 +84,6 @@ variant that bypasses gdb-remote entirely.
 
 - `inject_fuzz_data.py` has no transport yet: helloworld reads no input. First input-channel
   step = give the target a stdin/TCP shim, then pour fuzz data across it while the debug
-  channel holds the process — the two-channel choreography ptrfuzz core will own.
+  channel holds the process — the two-channel choreography dbgfuzz core will own.
 - Crash-path target (SIGSEGV variant) for exercising the crash-scene flow comes with the first
   core increment.

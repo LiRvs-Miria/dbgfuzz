@@ -1,10 +1,10 @@
-# ptrfuzz design: architecture
+# dbgfuzz design: architecture
 
-> Status: draft (2026-11-18). Scope: how ptrfuzz works internally — components, channels, coverage backends, symbolization, crash handling. For why ptrfuzz exists, read [background](../background.md) (中文：[background.zh-CN.md](../background.zh-CN.md)). 中文镜像：[architecture.zh-CN.md](architecture.zh-CN.md)。
+> Status: draft (2026-11-18). Scope: how dbgfuzz works internally — components, channels, coverage backends, symbolization, crash handling. For why dbgfuzz exists, read [background](../background.md) (中文：[background.zh-CN.md](../background.zh-CN.md)). 中文镜像：[architecture.zh-CN.md](architecture.zh-CN.md)。
 
 ## Components and deployment
 
-ptrfuzz runs on the workstation; a small companion, `lldb-server`, runs on the target side (cross-compiled for the device, or native on Linux targets). Debug info — the ELF/DWARF copy — is a workstation asset. The target runs whatever binary ships: stripped release builds are fine.
+dbgfuzz runs on the workstation; a small companion, `lldb-server`, runs on the target side (cross-compiled for the device, or native on Linux targets). Debug info — the ELF/DWARF copy — is a workstation asset. The target runs whatever binary ships: stripped release builds are fine.
 
 ```
 workstation                                       target
@@ -19,7 +19,7 @@ workstation                                       target
 
 ## Two channels, one brain
 
-The debug channel and the input channel never talk to each other. ptrfuzz owns both connections and sequences them; `lldb-server` and the input driver are both unaware of each other's existence.
+The debug channel and the input channel never talk to each other. dbgfuzz owns both connections and sequences them; `lldb-server` and the input driver are both unaware of each other's existence.
 
 **The input channel is the real attack surface.** Fuzz inputs enter through the target's actual interface — network, serial, file — never through the debug channel. Injecting through the debug channel would measure the debug path, not the target.
 
@@ -72,4 +72,4 @@ A crash is any stop caused by a signal that is not one of our breakpoints. Handl
 - Hardware breakpoint slots are scarce; coverage granularity on real devices is a budgeted resource, not a free good.
 - `lldb-server` on the target is itself attack surface and footprint: test builds only, never production images.
 - Interpreted targets are out of scope: where an interpreter can run, existing interpreter-aware fuzzers (Atheris-class) already win.
-- The harness problem (getting bytes into a closed target) is out of scope; ptrfuzz covers everything downstream of the input channel.
+- The harness problem (getting bytes into a closed target) is out of scope; dbgfuzz covers everything downstream of the input channel.

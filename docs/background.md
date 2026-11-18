@@ -1,4 +1,4 @@
-# Background: why ptrfuzz exists
+# Background: why dbgfuzz exists
 
 *A five-minute read. 中文版：[background.zh-CN.md](background.zh-CN.md)。*
 
@@ -24,11 +24,11 @@ So use it as the fuzzer's **eyes** — debugger-side coverage feedback for targe
 
 ## The architecture
 
-ptrfuzz runs on your workstation. The target runs a small companion — `lldb-server` — and the two are connected by a debug channel. Fuzz inputs go in through the target's real interface (network, serial, file): the same door the world would use. Two channels, one brain:
+dbgfuzz runs on your workstation. The target runs a small companion — `lldb-server` — and the two are connected by a debug channel. Fuzz inputs go in through the target's real interface (network, serial, file): the same door the world would use. Two channels, one brain:
 
 ```
 workstation                                    target
-├─ ptrfuzz                                     └─ lldb-server (companion)
+├─ dbgfuzz                                     └─ lldb-server (companion)
 │    (fuzzer, coverage, reports)
 └─ target binary + debug info copy
         ← debug channel: breakpoints, stops, state reads
@@ -50,10 +50,10 @@ What this placement gives you:
 
 ## The niche, stated honestly
 
-ptrfuzz is not competing with libFuzzer or AFL++. If you have source and want throughput, use them — they are faster by orders of magnitude. ptrfuzz serves the intersection:
+dbgfuzz is not competing with libFuzzer or AFL++. If you have source and want throughput, use them — they are faster by orders of magnitude. dbgfuzz serves the intersection:
 
 > **real target + closed source + coverage-guided + cheap triage**
 
 That intersection is real: firmware security research, vendor SDL for shipped binaries (a legal obligation in the EU from December 2027 under the Cyber Resilience Act), and ICS runtime research where the runtime itself is the target.
 
-What ptrfuzz is **not**: a throughput tool. Debugger-side coverage on real hardware is slow, and that is accepted by design — campaigns are targeted and nightly, not bulk. The input-channel harness (getting bytes into a closed target) remains the user's job; ptrfuzz covers everything downstream of the channel.
+What dbgfuzz is **not**: a throughput tool. Debugger-side coverage on real hardware is slow, and that is accepted by design — campaigns are targeted and nightly, not bulk. The input-channel harness (getting bytes into a closed target) remains the user's job; dbgfuzz covers everything downstream of the channel.
